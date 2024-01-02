@@ -6,14 +6,36 @@
     let direction: [number, number];
     let food: [number, number];
     let intervalID: number | undefined;
-    // let gameOver = false;
-    // let score = 0;
+    let gameOver = false;
+    let score = 0;
+    let highScore = getHighScore();
 
     // interval between each update in [ms]
     let intervalTimeout = 150;
 
+    const HIGH_SCORE_KEY = "highScore";
+
+    function getHighScore() {
+        const value = localStorage.getItem(HIGH_SCORE_KEY);
+        if (value) {
+            const newHighScore = parseInt(value);
+            if (newHighScore > boardWidth * boardHeight) {
+                return -1;
+            }
+            return newHighScore;
+        }
+        return 0;
+    }
+
+    function setHighScore() {
+        if (score > highScore) {
+            localStorage.setItem(HIGH_SCORE_KEY, score.toString());
+            highScore = score;
+        }
+    }
+
     function setup() {
-        // score = 0;
+        score = 0;
         snake = [
             [2, 0],
             [1, 0],
@@ -21,7 +43,8 @@
         ];
         direction = [1, 0];
         food = pickRandomFreePosition();
-        // gameOver = false;
+        gameOver = false;
+        intervalID = setInterval(update, intervalTimeout);
     }
 
     setup();
@@ -45,6 +68,7 @@
             // stop update interval
             clearInterval(intervalID);
             console.log("game over");
+            setHighScore();
             return;
         }
 
@@ -52,7 +76,16 @@
 
         // check if collecting food
         if (nextX === food[0] && nextY === food[1]) {
-            // score += 1;
+            score += 1;
+            if (snake.length == boardWidth * boardHeight) {
+                // stop update interval
+                clearInterval(intervalID);
+                console.log("you won");
+                snake = snake;
+                setHighScore();
+                gameOver=true;
+                return;
+            }
             food = pickRandomFreePosition();
         } else {
             // remove tail to keep the same snake length if food was not collected
@@ -100,13 +133,17 @@
         return [randomX, randomY];
     }
 
-    intervalID = setInterval(update, intervalTimeout);
 </script>
 
 <!-- globally capture keydown events -->
 <svelte:window on:keydown={handleKeydown} />
 
 <main>
+    <div class="score">
+        Score: {score}
+        High score: {highScore}
+    </div>
+
     {#each Array(boardHeight).fill(0) as _, y}
         <div class="row">
             {#each Array(boardWidth).fill(0) as _, x}
@@ -115,17 +152,22 @@
                     class="cell
                 {snake.find(([sx, sy]) => sx === x && sy === y) ? 'snake' : ''}
                 {food[0] === x && food[1] === y ? 'food' : ''} 
+                {snake[0][0] === x && snake[0][1] === y ? 'head' : ''} 
                 "
                 ></div>
             {/each}
         </div>
     {/each}
+    {#if gameOver}
+        <button on:click={setup}>Play again</button>
+    {/if}
 </main>
 
 <style>
     .row {
         display: flex;
     }
+
     .cell {
         width: 40px;
         height: 40px;
@@ -134,10 +176,23 @@
         background-color: greenyellow;
         margin: 1px;
     }
+
     .snake {
         background-color: slateblue;
     }
+
+    .head {
+        background-color: blue;
+    }
+
     .food {
         background-color: red;
+    }
+
+    .score {
+        font-size: 2rem;
+        font-family: Futura, sans-serif;
+        font-weight: bold;
+        color: #b4b4b4;
     }
 </style>
